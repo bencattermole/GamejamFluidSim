@@ -1,8 +1,12 @@
 import math
 import pygame
+import Coord
 import time
 import random
 
+Screen_Size = 512
+pixel_size = 16
+scale = int(Screen_Size/pixel_size)
 
 class Fluid:
     def __init__(self, size, dt, diff, visc, s, density, Vx, Vy, Vx0, Vy0, screen):
@@ -18,17 +22,13 @@ class Fluid:
         self.Vy0 = Vy0
         self.screen = screen
 
-    def addDensity(self, x, y, amount, N):
-        print('check to see if add density runs')
-        index = IX(x, y, N)
-        print(f'this is the index density is added at - {index}')
-        self.density[index] += amount
-        print(f'this is the density in add density - {self.density[index]}')
+    def addDensity(self, x, y, amount):
+        print(f'doing this now {x,y}')
+        self.density[Coord.Coord(int(x), int(y))] += amount
 
-    def addVelocity(self, x, y, amountX, amountY, N):
-        index = IX(x, y, N)
-        self.Vx[index] += amountX
-        self.Vy[index] += amountY
+    def addVelocity(self, x, y, amountX, amountY):
+        self.Vx[Coord.Coord(int(x), int(y))] += amountX
+        self.Vy[Coord.Coord(int(x), int(y))] += amountY
 
     def step(self):
         N = self.size
@@ -42,62 +42,43 @@ class Fluid:
         s = self.s
         density = self.density
 
-        print(f'1st step - {self.density[32896]}')
-
         #tic = time.perf_counter()
         self.Vx = diffuse(1, Vx0, Vx, visc, dt, 4, N)
         self.Vy = diffuse(2, Vy0, Vy, visc, dt, 4, N)
         #toc = time.perf_counter()
         #print(f"ran two diffuse in {toc - tic:0.4f} seconds")
 
-        print(f'2nd step - {self.density[32896]}')
-
         self.Vx0 = self.Vx
         self.Vy0 = self.Vy
-
-        print(f'3rd step - {self.density[32896]}')
 
         #tic = time.perf_counter()
         self.Vx, self.Vy = project(Vx0, Vy0, Vx, Vy, 4, N)
         #toc = time.perf_counter()
         #print(f"ran project in {toc - tic:0.4f} seconds")
 
-        print(f'4th step - {self.density[32896]}')
-
         self.Vx0 = self.Vx
         self.Vy0 = self.Vy
-
-        self.density[32896] = 100.0
-
-        print(f'5th step - {self.density[32896]}')
 
         #tic = time.perf_counter()
         self.Vx = advect(1, Vx, Vx0, Vx0, Vy0, dt, N)
         self.Vy = advect(2, Vy, Vy0, Vx0, Vy0, dt, N)
+
+        self.Vx = constraining_looper(self.Vx, -1, 1)
+        self.Vy = constraining_looper(self.Vy, -1, 1)
+
         #toc = time.perf_counter()
         #print(f"ran two advect in {toc - tic:0.4f} seconds")
 
-        print(f'6th step - {self.density[32896]}')
-
         self.Vx0 = self.Vx
         self.Vy0 = self.Vy
-
-        self.density[32896] = 100.0
-
-        print(f'7th step - {self.density[32896]}')
-
 
         #tic = time.perf_counter()
         self.Vx, self.Vy = project(Vx, Vy, Vx0, Vy0, 4, N)
         #toc = time.perf_counter()
         #print(f"ran 2nd project in {toc - tic:0.4f} seconds")
 
-        print(f'8th step - {self.density[32896]}')
-
         self.Vx0 = self.Vx
         self.Vy0 = self.Vy
-
-        print(f'9th step - {self.density[32896]}')
 
         #tic = time.perf_counter()
         self.s = diffuse(0, s, density, diff, dt, 4, N)
@@ -105,34 +86,16 @@ class Fluid:
         #toc = time.perf_counter()
         #print(f"ran diffuse & advect in {toc - tic:0.4f} seconds")
 
-        print(f'10th step - {self.density[32896]}')
-
         print('#### FINISHED STEP ####')
 
     def render(self):
         for j in range(self.size - 1):
             for i in range(self.size - 1):
-                d = self.density[IX(i, j, self.size)]
-                #print(f'{j, i} with density: {d}')
-                if IX(i, j, self.size) == 32896:
-                    print(f'at correct index, this is the value of d - {d}')
+                d = self.density[Coord.Coord(int(i), int(j))]
                 if d != 0:
-                    print('is this running')
+                    print('test')
                     COLOR = (255, 255, d)
-                    pygame.draw.rect(self.screen, COLOR, (i, j, 20, 20))
-
-
-
-'''
-the IX function is used to go from a 2D coordinate to the position of that coordinate in a one dimensional array, this
-is from Dan Shiffman's original video, i will likely come back and change it to improve its speed as I want to use as few
-arrays as possible.
-'''
-
-
-def IX(x, y, N):
-    # N here is screenSize from the main loop
-    return int(x + y * N)
+                    pygame.draw.rect(self.screen, COLOR, (i*pixel_size, j*pixel_size, pixel_size, pixel_size))
 
 
 '''
@@ -164,14 +127,18 @@ iter - number of iterations is how many times we apply the 'rules' of this funct
 def lin_solve(b, x, x0, a, a_eq, iter, N):
     c_recip = 1.0 / a_eq
     #tic = time.perf_counter()
-    for iteration in range(iter):
+    # for iteration in range(iter):
+    for i in range(1, N - 1, 1):
         for j in range(1, N - 1, 1):
-            for i in range(1, N - 1, 1):
-                x[IX(i, j, N)] = (x0[IX(i, j, N)] + a * (
-                        x[IX(i + 1, j, N)] + x[IX(i - 1, j, N)] + x[IX(i, j + 1, N)] + x[
-                    IX(i, j - 1, N)])) * c_recip
+                x.update({Coord.Coord(int(i), int(j)):
+                 (x0[Coord.Coord(int(i), int(j))]
+                  + a * (x[Coord.Coord(int(i + 1), int(j))]
+                  + x[Coord.Coord(int(i - 1), int(j))]
+                  + x[Coord.Coord(int(i), int(j + 1))]
+                  + x[Coord.Coord(int(i), int(j - 1))])) * c_recip})
 
-        x = set_bnd(b, x, N)
+
+    x = set_bnd(b, x, N)
     #toc = time.perf_counter()
     #print(f"@@@@ ran inside lin_solve in {toc - tic:0.4f} seconds")
 
@@ -185,21 +152,24 @@ to keep the fluid in the box when a velocity goes into the wall the wall respond
 
 
 def set_bnd(b, x, N):
-
     # I wasn't sure which way round the if statement should go here so if it doesnt work change them
 
+    #tic = time.perf_counter()
     for i in range(1, N - 1, 1):
-        x[IX(i, 0, N)] = -x[IX(i, 1, N)] if b == 2 else x[IX(i, 1, N)]
-        x[IX(i, N - 1, N)] = -x[IX(i, N - 2, N)] if b == 2 else x[IX(i, N - 2, N)]
+        x[Coord.Coord(0, int(i))] = -x[Coord.Coord(int(1), int(i))] if b == 1 else x[Coord.Coord(int(1), int(i))]
+        x[Coord.Coord(int(N), int(i))] = -x[Coord.Coord(int(N - 1), int(i))] if b == 1 else x[
+            Coord.Coord(int(N - 1), int(i))]
+        x[Coord.Coord(int(i), 0)] = -x[Coord.Coord(int(i), int(1))] if b == 2 else x[Coord.Coord(int(i), int(1))]
+        x[Coord.Coord(int(i), int(N))] = -x[Coord.Coord(int(i), int(N - 1))] if b == 2 else x[
+            Coord.Coord(int(i), int(N - 1))]
 
-    for j in range(1, N - 1, 1):
-        x[IX(0, j, N)] = -x[IX(1, j, N)]if b == 1 else x[IX(1, j, N)]
-        x[IX(N - 1, j, N)] = -x[IX(N - 2, j, N)] if b == 1 else x[IX(N - 2, j, N)]
+    x[Coord.Coord(0, 0)] = 0.5 * (x[Coord.Coord(1, 0)] + x[Coord.Coord(0, 1)])
+    x[Coord.Coord(0, N)] = 0.5 * (x[Coord.Coord(1, N)] + x[Coord.Coord(0, N - 1)])
+    x[Coord.Coord(N, 0)] = 0.5 * (x[Coord.Coord(N - 1, 0)] + x[Coord.Coord(N, 1)])
+    x[Coord.Coord(N, N)] = 0.5 * (x[Coord.Coord(N - 1, N)] + x[Coord.Coord(N, N - 1)])
 
-    x[IX(0, 0, N)] = 0.5 * (x[IX(1, 0, N)] + x[IX(0, 1, 0)])
-    x[IX(0, N - 1, N)] = 0.5 * (x[IX(1, N - 1, N)] + x[IX(0, N - 2, N)])
-    x[IX(N - 1, 0, N)] = 0.5 * (x[IX(N - 2, 0, N)] + x[IX(N - 1, 1, N)])
-    x[IX(N - 1, N - 1, N)] = 0.5 * (x[IX(N - 2, N - 1, N)] + x[IX(N - 1, N - 2, N)])
+    #toc = time.perf_counter()
+    #print(f"  @@@@ ran inside lin_solve's set_bnd in {toc - tic:0.4f} seconds")
 
     return x
 
@@ -216,21 +186,16 @@ N - screen size
 
 def project(velocX, velocY, p, div, iter, N):
 
-    print(velocX[32896])
-    print(velocY[32896])
-    print(p[32896])
-    print(div[32896])
-
-    '''
-    i do not understand how these can be the value for density
-    '''
-
     for j in range(1, N - 1, 1):
         for i in range(1, N - 1, 1):
-            div[IX(i, j, N)] = -0.5 * (
-                    velocX[IX(i + 1, j, N)] - velocX[IX(i - 1, j, N)] + velocY[IX(i, j + 1, N)] - velocY[
-                IX(i, j - 1, N)]) / N
-            p[IX(i, j, N)] = 0
+            # if IX(i ,j, N) == 32896:
+            # print(f'INSIDE for loop in project div 1ST IS - {div[32896]}')
+            div[Coord.Coord(int(i), int(j))] = -0.5 * (
+                        velocX[Coord.Coord(int(i + 1), int(j))] - velocX[Coord.Coord(int(i - 1), int(j))] + velocY[
+                    Coord.Coord(int(i), int(j + 1))] - velocY[Coord.Coord(int(i), int(j - 1))]) / N
+            # if IX(i ,j, N) == 32896:
+            # print(f'INSIDE for loop in project div 2nd IS - {div[32896]}')
+            p[Coord.Coord(int(i), int(j))] = 0
 
     div = set_bnd(0, div, N)
     p = set_bnd(0, p, N)
@@ -238,8 +203,12 @@ def project(velocX, velocY, p, div, iter, N):
 
     for j in range(1, N - 1, 1):
         for i in range(1, N - 1, 1):
-            velocX[IX(i, j, N)] -= 0.5 * (p[IX(i + 1, j, N)] - p[IX(i - 1, j, N)]) * N
-            velocY[IX(i, j, N)] -= 0.5 * (p[IX(i, j + 1, N)] - p[IX(i, j - 1, N)]) * N
+            plusP_i = p[Coord.Coord(int(i + 1), int(j))]
+            minusP_i = p[Coord.Coord(int(i - 1), int(j))]
+            plusP_j = p[Coord.Coord(int(i), int(j + 1))]
+            minusP_j = p[Coord.Coord(int(i), int(j - 1))]
+            velocX[Coord.Coord(int(i), int(j))] -= constrain((0.5 * (plusP_i - minusP_i) * N), -1, 1)
+            velocY[Coord.Coord(int(i), int(j))] -= constrain((0.5 * (plusP_j - minusP_j) * N), -1, 1)
 
     velocX = set_bnd(1, velocX, N)
     velocY = set_bnd(2, velocY, N)
@@ -261,46 +230,50 @@ i and j.
 
 
 def advect(b, d, d0, velocX, velocY, dt, N):
-    dtx = dt * (N - 2)
-    dty = dt * (N - 2)
 
-    for j in range(1, N - 1, 1):
-        for i in range(1, N - 1, 1):
-            tmp1 = dtx * velocX[IX(i, j, N)]
-            tmp2 = dty * velocY[IX(i, j, N)]
+    dt0 = dt*N
+    for i in range(1, N, 1):
+        for j in range(1, N, 1):
+                x = constrain((i - dt0 * velocX[Coord.Coord(int(i), int(j))]), 0, N)
+                y = constrain((j - dt0 * velocY[Coord.Coord(int(i), int(j))]), 0, N)
 
-            x = i - tmp1
-            y = j - tmp2
+                if x < 0.5: x = 0.5
+                if x > N + 0.5: x = N + 0.5
 
-            if x < 0.5: x = 0.5
-            if x > N + 0.5: x = N + 0.5
+                i0 = int(x)
+                i1 = constrain((int(i0 + 1)), 0, N)
 
-            i0 = math.floor(x)
-            i1 = i0 + 1.0
+                if y < 0.5: y = 0.5
+                if y > N + 0.5: y = N + 0.5
 
-            if y < 0.5: y = 0.5
-            if y > N + 0.5: y = N + 0.5
+                j0 = int(y)
+                j1 = constrain((int(j0 + 1)), 0, N)
 
-            j0 = math.floor(y)
-            j1 = j0 + 1.0
+                s1 = x - i0
+                s0 = 1.0 - s1
+                t1 = y - j0
+                t0 = 1.0 - t1
 
-            s1 = x - i0
-            s0 = 1.0 - s1
-            t1 = y - j0
-            t0 = 1.0 - t1
-
-            i0i = int(i0)
-            i1i = int(i1)
-            j0i = int(j0)
-            j1i = int(j1)
-
-            d[IX(i, j, N)] = s0 * ((t0 *(d0[IX(i0i, j0i, N)])) + (t1 * (d0[IX(i0i, j1i, N)]))) + s1 * ((t0 *(d0[IX(i1i, j0i, N)])) + (t1 * (d0[IX(i1i, j1i, N)])))
+                d[Coord.Coord(int(i), int(j))] = s0 * (t0 * d0[Coord.Coord(int(i0), int(j0))]
+                                               + t1 * d0[Coord.Coord(int(i0), int(j1))]) \
+                                               + s1 * (t0 * d0[Coord.Coord(int(i1), int(j0))]
+                                               + t1 * d0[Coord.Coord(int(i1), int(j1))])
 
     d = set_bnd(b, d, N)
 
     return d
 
 
+def constraining_looper(dict, min, max):
+    for key in dict:
+        dict[key] = constrain(dict[key], min, max)
 
+    return dict
 
-
+def constrain(value, min, max):
+    if value < min:
+        return min
+    elif value > max:
+        return max
+    else:
+        return value
