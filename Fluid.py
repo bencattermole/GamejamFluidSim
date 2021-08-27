@@ -23,7 +23,6 @@ class Fluid:
         self.screen = screen
 
     def addDensity(self, x, y, amount):
-        print(f'doing this now {x,y}')
         self.density[Coord.Coord(int(x), int(y))] += amount
 
     def addVelocity(self, x, y, amountX, amountY):
@@ -86,16 +85,20 @@ class Fluid:
         #toc = time.perf_counter()
         #print(f"ran diffuse & advect in {toc - tic:0.4f} seconds")
 
-        print('#### FINISHED STEP ####')
 
     def render(self):
         for j in range(self.size - 1):
             for i in range(self.size - 1):
                 d = self.density[Coord.Coord(int(i), int(j))]
                 if d != 0:
-                    print('test')
-                    COLOR = (255, 255, d)
+                    COLOR = (d,d,d)
                     pygame.draw.rect(self.screen, COLOR, (i*pixel_size, j*pixel_size, pixel_size, pixel_size))
+
+    def fade(self):
+        for j in range(self.size - 1):
+            for i in range(self.size - 1):
+                d = self.density[Coord.Coord(int(i), int(j))]
+                self.density.update({Coord.Coord(int(i), int(j)): constrain(d, 0, 255)})
 
 
 '''
@@ -127,15 +130,15 @@ iter - number of iterations is how many times we apply the 'rules' of this funct
 def lin_solve(b, x, x0, a, a_eq, iter, N):
     c_recip = 1.0 / a_eq
     #tic = time.perf_counter()
-    # for iteration in range(iter):
+    #for iteration in range(iter):
     for i in range(1, N - 1, 1):
         for j in range(1, N - 1, 1):
-                x.update({Coord.Coord(int(i), int(j)):
-                 (x0[Coord.Coord(int(i), int(j))]
-                  + a * (x[Coord.Coord(int(i + 1), int(j))]
-                  + x[Coord.Coord(int(i - 1), int(j))]
-                  + x[Coord.Coord(int(i), int(j + 1))]
-                  + x[Coord.Coord(int(i), int(j - 1))])) * c_recip})
+                    x.update({Coord.Coord(int(i), int(j)):
+                     (x0[Coord.Coord(int(i), int(j))]
+                      + a * (x[Coord.Coord(int(i + 1), int(j))]
+                      + x[Coord.Coord(int(i - 1), int(j))]
+                      + x[Coord.Coord(int(i), int(j + 1))]
+                      + x[Coord.Coord(int(i), int(j - 1))])) * c_recip})
 
 
     x = set_bnd(b, x, N)

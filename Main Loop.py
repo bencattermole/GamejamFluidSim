@@ -18,62 +18,8 @@ ran diffuse & advect in 1.0912 seconds
 even taking 1 second would lead to lots of lag so all functions must be reduced, i believe the biggest time sink is using
 the 1 dimensional array for everything
 
-11:39 27/08 - down to 4.23 seconds with the introduction of dictionaries
-
-13:27 27/08 -
-this is the index density is added at - 32896
-this is the density in add density - 100.0
-at correct index, this is the value of d - 100.0
-density not zero at - (128, 128)
-Vx before density declared - 1.0
-1st step density is - 100.0
-(111) just to check this is N - 256
-(111) veloc X starting project 1.0
-(111) veloc Y starting project 1.0
-(111) p starting project 1.0
-(111) div starting project 1.0
-################################################
-div before set_bnd-0.0
-div after set_bnd-0.0
-p before set_bnd 0.0
-p after set_bnd 0.0
-p before lin solve 0.0
-p after lin solve -2.848958482176866e-06
-################################################
-VelocX and VelocY at end (0.9078298253886603, 0.9078298253886603)
-value when back in step function - 0.9078298253886603
-value when back in step funciton - 0.9078298253886603
-@@@@@@@@@@@@@@@@@@ outside project in step @@@@@@@@@@@@@@@@@@
-1st - 0.9078298253886603
-1st - 0.9078298253886603
-INSIDE ADVECT 1ST IS -2.848958482176866e-06
-INSIDE ADVECT 2nd IS 0.0
-INSIDE ADVECT 1ST IS -0.0
-INSIDE ADVECT 2nd IS 0.0
-2nd - 0.0
-2nd - 0.0
-3rd - 0.0
-3rd - 0.0
-@@@@@@@@@@@@@@@@@@ outside project in step fin @@@@@@@@@@@@@@@@@@
-(111) just to check this is N - 256
-(111) veloc X starting project 0.0
-(111) veloc Y starting project 0.0
-(111) p starting project 0.9078298253886603
-(111) div starting project 0.9078298253886603
-################################################
-div before set_bnd0.000306736971055684
-div after set_bnd0.000306736971055684
-p before set_bnd 0.0
-p after set_bnd 0.0
-p before lin solve 0.0
-p after lin solve -7.404934578019768e-05
-################################################
-VelocX and VelocY at end (0.036076802889768424, 0.03607680288976842)
-value when back in step function after 2nd project - 0.036076802889768424
-value when back in step funciton after 2nd project - 0.03607680288976842
-INSIDE ADVECT 1ST IS 100.0
-INSIDE ADVECT 2nd IS 0.6997189764790552
-#### FINISHED STEP ####
+17:41 - alot faster now although this is because ive taken away the iteration in the lin_solve function, it does not appear
+to behave as expected, it seems like density can only move diagonally when not diffusing
 
 '''
 
@@ -149,9 +95,9 @@ while running:
     Mouse_x, Mouse_y = pygame.mouse.get_pos()
 
     # in update
-    fluid.addDensity(int(scale/2), int(scale/2), 100)
-    fluid.addVelocity(int(scale/2), int(scale/2), 0.2, -0.2)
-    fluid.addVelocity(int(scale/2), int(scale/2), 0, -0.2)
+    fluid.addDensity(int(scale), int(scale), 200)
+    fluid.addVelocity(int(scale), int(scale), 0, -0.0001)
+    fluid.fade()
     fluid.render()
 
     fluid.step()
