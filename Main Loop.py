@@ -17,6 +17,8 @@ ran diffuse & advect in 1.0912 seconds
 even taking 1 second would lead to lots of lag so all functions must be reduced, i believe the biggest time sink is using
 the 1 dimensional array for everything
 
+11:39 27/08 - down to 4.23 seconds with the introduction of dictionaries
+
 '''
 
 Screen_Size = 256
@@ -35,18 +37,33 @@ pygame.init()
 declaring fluid variables and then creating a fluid class object with them
 '''
 
+empty = {}
+
+for i in range(Screen_Size*Screen_Size):
+    empty[i] = 0
+
+
 size = Screen_Size
 DT = 0.1
 diff = 0
 visc = 0
-s = np.empty(Screen_Size*Screen_Size, dtype=float)
-density = np.empty(Screen_Size*Screen_Size, dtype=float)
+# s = np.empty(Screen_Size*Screen_Size, dtype=float)
+# density = np.empty(Screen_Size*Screen_Size, dtype=float)
 
-Vx = np.empty(Screen_Size*Screen_Size, dtype=float)
-Vy = np.empty(Screen_Size*Screen_Size, dtype=float)
+s = empty
+density = empty
 
-Vx0 = np.empty(Screen_Size*Screen_Size, dtype=float)
-Vy0 = np.empty(Screen_Size*Screen_Size, dtype=float)
+# Vx = np.empty(Screen_Size*Screen_Size, dtype=float)
+# Vy = np.empty(Screen_Size*Screen_Size, dtype=float)
+
+# Vx0 = np.empty(Screen_Size*Screen_Size, dtype=float)
+# Vy0 = np.empty(Screen_Size*Screen_Size, dtype=float)
+
+Vx = empty
+Vy = empty
+
+Vx0 = empty
+Vy0 = empty
 
 fluid = Fluid.Fluid(size, DT, diff, visc, s, density, Vx, Vy, Vx0, Vy0, screen)
 
@@ -68,11 +85,10 @@ while running:
     Mouse_x, Mouse_y = pygame.mouse.get_pos()
 
     # in update
-    if dragged:
-        fluid.addDensity(Mouse_x, Mouse_y, 100, Screen_Size)
+    fluid.addDensity(128, 128, 100, Screen_Size)
+    fluid.render()
 
     fluid.step()
-    fluid.render()
 
     pygame.display.update()
 

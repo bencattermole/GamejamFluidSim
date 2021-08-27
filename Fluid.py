@@ -1,6 +1,7 @@
 import math
 import pygame
 import time
+import random
 
 
 class Fluid:
@@ -18,8 +19,11 @@ class Fluid:
         self.screen = screen
 
     def addDensity(self, x, y, amount, N):
+        print('check to see if add density runs')
         index = IX(x, y, N)
+        print(f'this is the index density is added at - {index}')
         self.density[index] += amount
+        print(f'this is the density in add density - {self.density[index]}')
 
     def addVelocity(self, x, y, amountX, amountY, N):
         index = IX(x, y, N)
@@ -38,44 +42,84 @@ class Fluid:
         s = self.s
         density = self.density
 
-        tic = time.perf_counter()
-        diffuse(1, Vx0, Vx, visc, dt, 4, N)
-        diffuse(2, Vy0, Vy, visc, dt, 4, N)
-        toc = time.perf_counter()
-        print(f"ran two diffuse in {toc - tic:0.4f} seconds")
+        print(f'1st step - {self.density[32896]}')
 
-        tic = time.perf_counter()
-        project(Vx0, Vy0, Vx, Vy, 4, N)
-        toc = time.perf_counter()
-        print(f"ran project in {toc - tic:0.4f} seconds")
+        #tic = time.perf_counter()
+        self.Vx = diffuse(1, Vx0, Vx, visc, dt, 4, N)
+        self.Vy = diffuse(2, Vy0, Vy, visc, dt, 4, N)
+        #toc = time.perf_counter()
+        #print(f"ran two diffuse in {toc - tic:0.4f} seconds")
 
-        tic = time.perf_counter()
-        advect(1, Vx, Vx0, Vx0, Vy0, dt, N)
-        advect(2, Vy, Vy0, Vx0, Vy0, dt, N)
-        toc = time.perf_counter()
-        print(f"ran two advect in {toc - tic:0.4f} seconds")
+        print(f'2nd step - {self.density[32896]}')
 
-        tic = time.perf_counter()
-        project(Vx, Vy, Vx0, Vy0, 4, N)
-        toc = time.perf_counter()
-        print(f"ran 2nd project in {toc - tic:0.4f} seconds")
+        self.Vx0 = self.Vx
+        self.Vy0 = self.Vy
 
-        tic = time.perf_counter()
-        diffuse(0, s, density, diff, dt, 4, N)
-        advect(0, density, s, Vx, Vy, dt, N)
-        toc = time.perf_counter()
-        print(f"ran diffuse & advect in {toc - tic:0.4f} seconds")
+        print(f'3rd step - {self.density[32896]}')
 
-        print('#### FINISH ####')
+        #tic = time.perf_counter()
+        self.Vx, self.Vy = project(Vx0, Vy0, Vx, Vy, 4, N)
+        #toc = time.perf_counter()
+        #print(f"ran project in {toc - tic:0.4f} seconds")
+
+        print(f'4th step - {self.density[32896]}')
+
+        self.Vx0 = self.Vx
+        self.Vy0 = self.Vy
+
+        self.density[32896] = 100.0
+
+        print(f'5th step - {self.density[32896]}')
+
+        #tic = time.perf_counter()
+        self.Vx = advect(1, Vx, Vx0, Vx0, Vy0, dt, N)
+        self.Vy = advect(2, Vy, Vy0, Vx0, Vy0, dt, N)
+        #toc = time.perf_counter()
+        #print(f"ran two advect in {toc - tic:0.4f} seconds")
+
+        print(f'6th step - {self.density[32896]}')
+
+        self.Vx0 = self.Vx
+        self.Vy0 = self.Vy
+
+        self.density[32896] = 100.0
+
+        print(f'7th step - {self.density[32896]}')
+
+
+        #tic = time.perf_counter()
+        self.Vx, self.Vy = project(Vx, Vy, Vx0, Vy0, 4, N)
+        #toc = time.perf_counter()
+        #print(f"ran 2nd project in {toc - tic:0.4f} seconds")
+
+        print(f'8th step - {self.density[32896]}')
+
+        self.Vx0 = self.Vx
+        self.Vy0 = self.Vy
+
+        print(f'9th step - {self.density[32896]}')
+
+        #tic = time.perf_counter()
+        self.s = diffuse(0, s, density, diff, dt, 4, N)
+        self.density = advect(0, density, s, Vx, Vy, dt, N)
+        #toc = time.perf_counter()
+        #print(f"ran diffuse & advect in {toc - tic:0.4f} seconds")
+
+        print(f'10th step - {self.density[32896]}')
+
+        print('#### FINISHED STEP ####')
 
     def render(self):
         for j in range(self.size - 1):
             for i in range(self.size - 1):
                 d = self.density[IX(i, j, self.size)]
-                if d > 0:
-                    print(d)
-                COLOR = (0, 0, d)
-                pygame.draw.rect(self.screen, COLOR, (i, j, 1, 1))
+                #print(f'{j, i} with density: {d}')
+                if IX(i, j, self.size) == 32896:
+                    print(f'at correct index, this is the value of d - {d}')
+                if d != 0:
+                    print('is this running')
+                    COLOR = (255, 255, d)
+                    pygame.draw.rect(self.screen, COLOR, (i, j, 20, 20))
 
 
 
@@ -105,7 +149,8 @@ N - Screen Size from main loop
 
 def diffuse(b, x, x0, diff, dt, iter, N):
     a = dt * diff * (N - 2) * (N - 2)
-    lin_solve(b, x, x0, a, 1 + 6 * a, iter, N)
+    x = lin_solve(b, x, x0, a, 1 + 6 * a, iter, N)
+    return x
 
 
 '''
@@ -118,6 +163,7 @@ iter - number of iterations is how many times we apply the 'rules' of this funct
 
 def lin_solve(b, x, x0, a, a_eq, iter, N):
     c_recip = 1.0 / a_eq
+    #tic = time.perf_counter()
     for iteration in range(iter):
         for j in range(1, N - 1, 1):
             for i in range(1, N - 1, 1):
@@ -125,7 +171,11 @@ def lin_solve(b, x, x0, a, a_eq, iter, N):
                         x[IX(i + 1, j, N)] + x[IX(i - 1, j, N)] + x[IX(i, j + 1, N)] + x[
                     IX(i, j - 1, N)])) * c_recip
 
-        set_bnd(b, x, N)
+        x = set_bnd(b, x, N)
+    #toc = time.perf_counter()
+    #print(f"@@@@ ran inside lin_solve in {toc - tic:0.4f} seconds")
+
+    return x
 
 
 '''
@@ -151,6 +201,8 @@ def set_bnd(b, x, N):
     x[IX(N - 1, 0, N)] = 0.5 * (x[IX(N - 2, 0, N)] + x[IX(N - 1, 1, N)])
     x[IX(N - 1, N - 1, N)] = 0.5 * (x[IX(N - 2, N - 1, N)] + x[IX(N - 1, N - 2, N)])
 
+    return x
+
 
 '''
 velocX - array of x components
@@ -163,6 +215,16 @@ N - screen size
 
 
 def project(velocX, velocY, p, div, iter, N):
+
+    print(velocX[32896])
+    print(velocY[32896])
+    print(p[32896])
+    print(div[32896])
+
+    '''
+    i do not understand how these can be the value for density
+    '''
+
     for j in range(1, N - 1, 1):
         for i in range(1, N - 1, 1):
             div[IX(i, j, N)] = -0.5 * (
@@ -170,17 +232,19 @@ def project(velocX, velocY, p, div, iter, N):
                 IX(i, j - 1, N)]) / N
             p[IX(i, j, N)] = 0
 
-    set_bnd(0, div, N)
-    set_bnd(0, p, N)
-    lin_solve(0, p, div, 1, 6, iter, N)
+    div = set_bnd(0, div, N)
+    p = set_bnd(0, p, N)
+    p = lin_solve(0, p, div, 1, 6, iter, N)
 
     for j in range(1, N - 1, 1):
         for i in range(1, N - 1, 1):
             velocX[IX(i, j, N)] -= 0.5 * (p[IX(i + 1, j, N)] - p[IX(i - 1, j, N)]) * N
             velocY[IX(i, j, N)] -= 0.5 * (p[IX(i, j + 1, N)] - p[IX(i, j - 1, N)]) * N
 
-    set_bnd(1, velocX, N)
-    set_bnd(2, velocY, N)
+    velocX = set_bnd(1, velocX, N)
+    velocY = set_bnd(2, velocY, N)
+
+    return velocX, velocY
 
 
 '''
@@ -232,7 +296,10 @@ def advect(b, d, d0, velocX, velocY, dt, N):
 
             d[IX(i, j, N)] = s0 * ((t0 *(d0[IX(i0i, j0i, N)])) + (t1 * (d0[IX(i0i, j1i, N)]))) + s1 * ((t0 *(d0[IX(i1i, j0i, N)])) + (t1 * (d0[IX(i1i, j1i, N)])))
 
-    set_bnd(b, d, N)
+    d = set_bnd(b, d, N)
+
+    return d
+
 
 
 
